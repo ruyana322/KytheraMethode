@@ -47,14 +47,14 @@ async function runProcess() {
         }
       });
 
-      // KODE SEMPURNA + TURBO BROWSER (Ultrafast + 1080p limit)
+      // KODE SEMPURNA + TURBO BROWSER (Resolusi Asli + Ultrafast)
       await ff.run(
         '-i', 'input.mp4', 
-        '-vf', 'scale=-2:1080,format=yuv420p',   // 🔑 Rem resolusi 1080p biar gak jebol
+        '-vf', 'format=yuv420p',                 
         '-c:v', 'libx264',
-        '-preset', 'ultrafast',                  // 🔑 SUPER NGEBUT
-        '-crf', '20',                            // 🔑 Kualitas tetep tajam
-        '-bf', '0',
+        '-preset', 'ultrafast',                  
+        '-crf', '20',                            
+        '-bf', '0',                              
         '-threads', String(ff._multiThread ? ffmpegThreadCount() : 1), 
         '-c:a', 'aac',
         '-b:a', '128k',
@@ -141,6 +141,7 @@ async function runProcess() {
     try {
       const ff = await loadFFmpeg();
       args.ffmpegArgs.push('-threads', String(ff._multiThread ? ffmpegThreadCount() : 1));
+      
       setProgress(15, 'Writing input...');
       ff.FS('writeFile', 'input.mp4', await ff._fetchFile(selectedFile));
       setProgress(35, 'Encoding (' + args.preset + ', CRF ' + args.crf + ')...');
@@ -206,15 +207,15 @@ document.getElementById('interpBtn').addEventListener('click', async () => {
     interpLog('inf', 'Writing input...'); ff.FS('writeFile', 'src.mp4', await ff._fetchFile(interpFileData));
     interpLog('inf', 'Step 1: Interpolate 60fps → ' + (60 * parseInt(scale)) + 'fps...');
     
-    // KODE SEMPURNA DI INTERP LAB (Ultrafast + 1080p limit)
+    // KODE SEMPURNA DI INTERP LAB (Resolusi Asli + Ultrafast)
     await ff.run(
       '-i', 'src.mp4', 
-      '-vf', 'scale=-2:1080,minterpolate=fps=' + (60 * parseInt(scale)) + ':mi_mode=mci:mc_mode=aobmc:vsbmc=1', 
+      '-vf', 'minterpolate=fps=' + (60 * parseInt(scale)) + ':mi_mode=mci:mc_mode=aobmc:vsbmc=1', 
       '-c:v', 'libx264', 
       '-preset', 'ultrafast',   
       '-crf', '20', 
       '-bf', '0',
-      '-threads', String(ff._multiThread ? ffmpegThreadCount() : 1),
+      '-threads', String(ff._multiThread ? ffmpegThreadCount() : 1), 
       '-c:a', 'aac',
       '-b:a', '128k',
       '-shortest',
