@@ -1,11 +1,15 @@
 /* ══════════════════════════════════════
    ffmpeg-engine.js
 
-   NOTE on versioning: @ffmpeg/ffmpeg@0.11.x pairs with @ffmpeg/core@0.11.0
-   (single-thread) or @ffmpeg/core-mt@0.11.0 (multi-thread). The -mt build
-   needs window.crossOriginIsolated === true (SharedArrayBuffer available)
-   to actually spin up worker threads — that's what coi-serviceworker.js
-   is for. Without it, -mt silently falls back to acting single-threaded.
+   NOTE on versioning: @ffmpeg/ffmpeg@0.11.x pairs with @ffmpeg/core@0.11.0.
+   There is NO @ffmpeg/core-mt@0.11.0 — the "-mt" core package only exists
+   for the newer 0.12.x ESM line, which is a different (incompatible) API.
+   Don't "fix" this into core-mt later, it 404s.
+
+   Multi-threading on 0.11.x doesn't need a separate core package: libx264
+   inside @ffmpeg/core@0.11.0 already runs multi-threaded automatically as
+   long as the page is crossOriginIsolated (SharedArrayBuffer available) —
+   which is what coi-serviceworker.js provides. We just pass -threads N.
    ══════════════════════════════════════ */
 let ffmpegLoaded = false, ffmpegInst = null;
 
@@ -22,14 +26,10 @@ async function loadFFmpeg() {
   setStatus('⏳ Loading FFmpeg.wasm (sekali saja)...', 'working');
   setProgress(5, 'Loading FFmpeg...');
   const { createFFmpeg, fetchFile } = FFmpeg;
-  const isolated = window.crossOriginIsolated === true;
-  const corePath = isolated
-    ? 'https://unpkg.com/@ffmpeg/core-mt@0.11.0/dist/ffmpeg-core.js'
-    : 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js';
-  const ff = createFFmpeg({ log: false, corePath });
+  const ff = createFFmpeg({ log: false, corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' });
   await ff.load();
   ff._fetchFile = fetchFile;
-  ff._multiThread = isolated;
+  ff._multiThread = window.crossOriginIsolated === true;
   ffmpegLoaded = true; ffmpegInst = ff;
   return ff;
 }
