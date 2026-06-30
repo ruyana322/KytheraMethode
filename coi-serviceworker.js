@@ -7,7 +7,7 @@ const FFMPEG_CACHE = "d4nzxml-ffmpeg-cache-v1";
 /** Anything matching this is large (~25-30MB) and version-pinned in the
  *  URL (e.g. /core-mt@0.11.0/), so it's safe to cache forever and skip
  *  re-downloading on every visit. */
-const isFfmpegAsset = (url) => /unpkg\.com\/@ffmpeg\/(core|core-mt)@/.test(url);
+const isFfmpegAsset = (url) => /unpkg\.com\/@ffmpeg\/core@/.test(url);
 
 if (typeof window === 'undefined') {
   self.addEventListener("install", () => self.skipWaiting());
