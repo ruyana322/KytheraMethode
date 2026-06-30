@@ -4,12 +4,6 @@
    patcher.js, ffmpeg-engine.js, ui.js.
    ══════════════════════════════════════ */
 
-/**
- * Reads the Advanced Encoder panel's dropdowns and turns them into
- * the actual -c:v libx264 ... ffmpeg.wasm arg list. Tune/Profile are
- * only appended when set to something other than "none" — passing
- * an empty -tune/-profile:v to libx264 is a hard error, not a no-op.
- */
 function buildEncoderArgs() {
   const codec = document.getElementById('encCodec').value;
   const crf = document.getElementById('encCrf').value;
@@ -26,44 +20,75 @@ function buildEncoderArgs() {
 async function runProcess() {
   if (!selectedFile) return;
   const btn = document.getElementById('patchBtn'); btn.disabled = true;
-  t0 = Date.now(); const sb = selectedFile.size;
+  let t0 = Date.now(); const sb = selectedFile.size;
   const base = selectedFile.name.replace(/\.[^/.]+$/, '');
 
   if (curMode === 'patch') {
-    setStatus('⚙️ Memeriksa struktur video...', 'working');
-    setProgress(10, 'Scanning...', true);
+    setStatus('⚙️ Menyiapkan Engine Patching...', 'working');
+    setProgress(10, 'Loading engine...', true);
+    
     try {
-      const ab = await selectedFile.arrayBuffer();
-      const data = new Uint8Array(ab);
-      const fs = isFaststart(data);
-      let patchAb;
-      if (fs) {
-        setProgress(40, 'Struktur OK — patching...');
-        setStatus('✅ Struktur OK — patching...', 'working');
-        patchAb = ab;
-      } else {
-        setProgress(15, 'Loading engine...');
-        setStatus('⚙️ Merapikan struktur MP4...', 'working');
-        const ff = await loadFFmpeg();
-        setProgress(30, 'Writing input...');
-        ff.FS('writeFile', 'input.mp4', await ff._fetchFile(selectedFile));
-        setProgress(50, 'Faststart...');
-        await ff.run('-i', 'input.mp4', '-c', 'copy', '-movflags', '+faststart', 'fs_out.mp4');
-        setProgress(65, 'Applying patch...');
-        const out = ff.FS('readFile', 'fs_out.mp4');
-        patchAb = out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength);
-        try { ff.FS('unlink', 'input.mp4'); ff.FS('unlink', 'fs_out.mp4'); } catch (e) {}
-      }
-      setProgress(75, 'Patching...');
+      const ff = await loadFFmpeg();
+      
+      setProgress(20, 'Membaca file video...');
+      ff.FS('writeFile', 'input.mp4', await ff._fetchFile(selectedFile));
+      
+      setStatus('⚙️ Optimasi Video & Anti-Delay...', 'working');
+      setProgress(30, 'Mulai rendering video...');
+      
+      ff.setLogger(({ type, message }) => {
+        console.log(`[FFmpeg ${type}] ${message}`);
+      });
+
+      ff.setProgress(({ ratio }) => {
+        if (ratio >= 0 && ratio <= 1) {
+          const pct = Math.round(ratio * 100);
+          setProgress(30 + (pct * 0.40), `Encoding Video: ${pct}%`); 
+        }
+      });
+
+      // KODE SEMPURNA + SABUK PENGAMAN + SUPERFAST
+      await ff.run(
+        '-i', 'input.mp4', 
+        '-vf', 'format=yuv420p',
+        '-c:v', 'libx264',
+        '-preset', 'superfast',   // 🔑 SUPERFAST biar sat-set!
+        '-crf', '20',
+        '-bf', '0',
+        '-threads', '1',          // 🔑 Tetep 1 thread biar gak crash
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-shortest',
+        '-metadata', 'copyright=By kythera',
+        '-metadata', 'artist=By kythera',
+        '-movflags', '+faststart', 
+        'fs_out.mp4'
+      );
+      
+      ff.setProgress(() => {}); 
+      ff.setLogger(() => {});   
+
+      setProgress(75, 'Menerapkan Shark HD Patch...');
+      const out = ff.FS('readFile', 'fs_out.mp4');
+      const patchAb = out.buffer.slice(out.byteOffset, out.byteOffset + out.byteLength);
+      
+      try { ff.FS('unlink', 'input.mp4'); ff.FS('unlink', 'fs_out.mp4'); } catch (e) {}
+
       const patch = patchSharkSampleTableMethod(patchAb);
-      setProgress(95, 'Downloading...');
+      
+      setProgress(95, 'Menyiapkan unduhan...');
       downloadBlob(patch.output, base + '_patched.mp4');
       setProgress(100, 'Selesai!');
+      
       const elapsed = (Date.now() - t0) / 1000;
       setStatus('✅ Selesai! File diunduh.', 'success');
       showResult(selectedFile.name, elapsed, sb, patch.output.byteLength);
       setTimeout(() => setProgress(0, '', false), 3000);
-    } catch (err) { setStatus('❌ Error: ' + err.message, 'error'); setProgress(0, '', false); }
+      
+    } catch (err) { 
+      setStatus('❌ Error: ' + err.message, 'error'); 
+      setProgress(0, '', false); 
+    }
 
   } else if (curMode === 'ky60') {
     setStatus('⏳ Kythera 60fps Methode: Memproses...', 'working');
@@ -179,7 +204,24 @@ document.getElementById('interpBtn').addEventListener('click', async () => {
     const ff = await loadFFmpeg(); interpLog('ok', 'FFmpeg ready');
     interpLog('inf', 'Writing input...'); ff.FS('writeFile', 'src.mp4', await ff._fetchFile(interpFileData));
     interpLog('inf', 'Step 1: Interpolate 60fps → ' + (60 * parseInt(scale)) + 'fps...');
-    await ff.run('-i', 'src.mp4', '-vf', 'minterpolate=fps=' + (60 * parseInt(scale)) + ':mi_mode=mci:mc_mode=aobmc:vsbmc=1', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '18', '-c:a', 'copy', 'interp.mp4');
+    
+    // KODE SEMPURNA DI INTERP LAB
+    await ff.run(
+      '-i', 'src.mp4', 
+      '-vf', 'minterpolate=fps=' + (60 * parseInt(scale)) + ':mi_mode=mci:mc_mode=aobmc:vsbmc=1', 
+      '-c:v', 'libx264', 
+      '-preset', 'superfast',   // 🔑 SUPERFAST di sini juga!
+      '-crf', '20', 
+      '-bf', '0',
+      '-threads', '1',
+      '-c:a', 'aac',
+      '-b:a', '128k',
+      '-shortest',
+      '-metadata', 'copyright=By kythera',
+      '-metadata', 'artist=By kythera',
+      'interp.mp4'
+    );
+    
     interpLog('ok', 'Interpolation done');
     interpLog('inf', 'Step 2: Frame boost x' + scale + '...');
     await ff.run('-itsscale', scale, '-i', 'interp.mp4', '-c', 'copy', 'its.mp4');

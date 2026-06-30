@@ -1,55 +1,58 @@
 /* ══════════════════════════════════════
-   ui.js
+   ui.js — single-page version (no tab nav, no i18n)
    ══════════════════════════════════════ */
 
-/* ── NAV ── */
-document.querySelectorAll('.nav-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const t = btn.dataset.t; if (!t) return;
-    document.querySelectorAll('.sec').forEach(s => s.classList.remove('on'));
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('on'));
-    document.getElementById(t).classList.add('on'); btn.classList.add('on');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-});
-
-/* ── RIPPLE ── */
-function addRipple(el) {
-  el.addEventListener('click', e => {
-    const r = el.getBoundingClientRect(), sz = Math.max(r.width, r.height), sp = document.createElement('span');
-    sp.className = 'ripple';
-    sp.style.cssText = `width:${sz}px;height:${sz}px;left:${e.clientX - r.left - sz / 2}px;top:${e.clientY - r.top - sz / 2}px`;
-    el.appendChild(sp);
-    sp.addEventListener('animationend', () => sp.remove());
-  });
-}
-document.querySelectorAll('.btn').forEach(addRipple);
+/* ── RIPPLE-LESS BUTTON PRESS (kept simple) ── */
 
 /* ── MODE ── */
 let curMode = 'patch';
+const MODE_COLOR = { patch: '', its: 'purple', ky60: 'green', encoder: 'orange' };
+const MODE_INFO = {
+  patch:   { ico: '⚡', name: 'Smart Patch', desc: 'Otomatis deteksi & proses — recommended' },
+  its:     { ico: '📐', name: 'Speed Booster', desc: 'Optimasi frame timing video' },
+  ky60:    { ico: '🚀', name: 'Kythera 60fps', desc: 'Optimasi kualitas HD otomatis' },
+  encoder: { ico: '🎛️', name: 'Advanced Encoder', desc: 'Custom H.264 encoding settings' }
+};
+
+function toggleModeList() {
+  document.getElementById('modeList').classList.toggle('open');
+  document.getElementById('modeSummary').classList.toggle('open');
+}
+
 function selMode(m) {
   curMode = m;
-  document.querySelectorAll('input[name="modeRadio"]').forEach(r => r.checked = (r.value === m));
-  ['icoP', 'icoI', 'icoK', 'icoE'].forEach(id => document.getElementById(id).className = 'mode-ico');
-  if (m === 'patch') document.getElementById('icoP').classList.add('active-c');
-  if (m === 'its') document.getElementById('icoI').classList.add('active-p');
-  if (m === 'ky60') document.getElementById('icoK').classList.add('active-g');
-  if (m === 'encoder') document.getElementById('icoE').classList.add('active-o');
-  document.getElementById('itsPanel').style.display = m === 'its' ? 'block' : 'none';
-  document.getElementById('encoderPanel').style.display = m === 'encoder' ? 'block' : 'none';
+  ['rowPatch', 'rowIts', 'rowKy60', 'rowEncoder'].forEach(id => {
+    document.getElementById(id).classList.remove('sel', 'purple', 'green', 'orange');
+  });
+  const rowId = { patch: 'rowPatch', its: 'rowIts', ky60: 'rowKy60', encoder: 'rowEncoder' }[m];
+  const row = document.getElementById(rowId);
+  row.classList.add('sel');
+  if (MODE_COLOR[m]) row.classList.add(MODE_COLOR[m]);
+
+  document.getElementById('itsPanel').classList.toggle('show', m === 'its');
+  document.getElementById('encoderPanel').classList.toggle('show', m === 'encoder');
+
   const btn = document.getElementById('patchBtn');
-  btn.className = 'btn ' + (m === 'its' ? 'btn-p' : m === 'ky60' ? 'btn-g' : m === 'encoder' ? 'btn-o' : 'btn-c');
+  btn.classList.remove('purple', 'green', 'orange');
+  if (MODE_COLOR[m]) btn.classList.add(MODE_COLOR[m]);
   btn.disabled = !selectedFile;
+
+  /* update collapsed summary row + auto-close the list */
+  const info = MODE_INFO[m];
+  document.getElementById('curModeIco').textContent = info.ico;
+  document.getElementById('curModeName').textContent = info.name;
+  document.getElementById('curModeDesc').textContent = info.desc;
+  document.getElementById('modeList').classList.remove('open');
+  document.getElementById('modeSummary').classList.remove('open');
 }
 document.querySelectorAll('.its-item[data-scale]').forEach(item => {
-  item.addEventListener('click', () => { document.querySelectorAll('.its-item[data-scale]').forEach(i => i.classList.remove('selected')); item.classList.add('selected'); });
+  item.addEventListener('click', () => { document.querySelectorAll('.its-item[data-scale]').forEach(i => i.classList.remove('sel')); item.classList.add('sel'); });
 });
 
 /* ── FILE + DRAG DROP ──
    FIX: original accepted any dropped/selected file and only found out
    it wasn't a real MP4 once patching threw mid-way. Now we sniff the
-   first 12 bytes up front and reject obviously-wrong files immediately,
-   with a clear i18n-friendly message instead of a binary-parser error. */
+   first 12 bytes up front and reject obviously-wrong files immediately. */
 let selectedFile = null;
 const dropZ = document.getElementById('dropZ');
 const fileInput = document.getElementById('fileInput');
@@ -62,13 +65,13 @@ fileInput.addEventListener('change', e => { if (e.target.files[0]) setFile(e.tar
 async function setFile(f) {
   const head = new Uint8Array(await f.slice(0, 12).arrayBuffer());
   if (!looksLikeMp4(head)) {
-    setStatus(currentLang === 'en' ? '❌ Not a valid MP4 file.' : '❌ Bukan file MP4 yang valid.', 'error');
+    setStatus('❌ Bukan file MP4 yang valid.', 'error');
     return;
   }
   selectedFile = f;
   const d = document.getElementById('fileDisp'); d.textContent = '📄 ' + f.name; d.classList.add('ok');
   document.getElementById('patchBtn').disabled = false;
-  setStatus(currentLang === 'en' ? 'File ready to process.' : 'File siap diproses.', '');
+  setStatus('File siap diproses.', '');
   const vid = document.getElementById('vidPrev'), ph = document.getElementById('prevPh');
   vid.src = URL.createObjectURL(f); vid.style.display = 'block'; ph.style.display = 'none';
   document.getElementById('resultCard').classList.remove('show');
@@ -108,5 +111,3 @@ document.getElementById('donateBtn').addEventListener('click', () => {
     setTimeout(() => h.textContent = '+6282129942772', 2000);
   });
 });
-
-document.addEventListener('DOMContentLoaded', () => { setLang(currentLang); });
