@@ -55,7 +55,7 @@ async function runProcess() {
         '-preset', 'superfast',   // 🔑 SUPERFAST biar sat-set!
         '-crf', '20',
         '-bf', '0',
-        '-threads', '1',          // 🔑 Tetep 1 thread biar gak crash
+        '-threads', String(ff._multiThread ? ffmpegThreadCount() : 1),  // 🔑 multi-core kalau crossOriginIsolated aktif, fallback 1 kalau enggak
         '-c:a', 'aac',
         '-b:a', '128k',
         '-shortest',
@@ -140,6 +140,7 @@ async function runProcess() {
     setProgress(0, 'Loading engine...', true);
     try {
       const ff = await loadFFmpeg();
+      args.ffmpegArgs.push('-threads', String(ff._multiThread ? ffmpegThreadCount() : 1));
       setProgress(15, 'Writing input...');
       ff.FS('writeFile', 'input.mp4', await ff._fetchFile(selectedFile));
       setProgress(35, 'Encoding (' + args.preset + ', CRF ' + args.crf + ')...');
@@ -213,7 +214,7 @@ document.getElementById('interpBtn').addEventListener('click', async () => {
       '-preset', 'superfast',   // 🔑 SUPERFAST di sini juga!
       '-crf', '20', 
       '-bf', '0',
-      '-threads', '1',
+      '-threads', String(ff._multiThread ? ffmpegThreadCount() : 1),
       '-c:a', 'aac',
       '-b:a', '128k',
       '-shortest',
