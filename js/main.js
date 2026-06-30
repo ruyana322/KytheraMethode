@@ -50,12 +50,12 @@ async function runProcess() {
       // KODE SEMPURNA + TURBO BROWSER (Resolusi Asli + Ultrafast)
       await ff.run(
         '-i', 'input.mp4', 
-        '-vf', 'format=yuv420p',                 
+        '-vf', 'format=yuv420p',                 // 🔑 Bersih dari scale, resolusi tetep original (Portrait TikTok)
         '-c:v', 'libx264',
-        '-preset', 'ultrafast',                  
-        '-crf', '20',                            
-        '-bf', '0',                              
-        '-threads', String(ff._multiThread ? ffmpegThreadCount() : 1), 
+        '-preset', 'ultrafast',                  // 🔑 SUPER NGEBUT
+        '-crf', '20',                            // 🔑 Kualitas tajem dewa
+        '-bf', '0',                              // 🔑 Anti-Delay TikTok
+        '-threads', String(ff._multiThread ? ffmpegThreadCount() : 1), // 🔑 Auto-pilot Multi-Thread
         '-c:a', 'aac',
         '-b:a', '128k',
         '-shortest',
@@ -210,7 +210,7 @@ document.getElementById('interpBtn').addEventListener('click', async () => {
     // KODE SEMPURNA DI INTERP LAB (Resolusi Asli + Ultrafast)
     await ff.run(
       '-i', 'src.mp4', 
-      '-vf', 'minterpolate=fps=' + (60 * parseInt(scale)) + ':mi_mode=mci:mc_mode=aobmc:vsbmc=1', 
+      '-vf', 'minterpolate=fps=' + (60 * parseInt(scale)) + ':mi_mode=mci:mc_mode=aobmc:vsbmc=1', // 🔑 Bersih dari scale
       '-c:v', 'libx264', 
       '-preset', 'ultrafast',   
       '-crf', '20', 
