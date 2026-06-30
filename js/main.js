@@ -47,15 +47,15 @@ async function runProcess() {
         }
       });
 
-      // KODE SEMPURNA + SABUK PENGAMAN + SUPERFAST
+      // KODE SEMPURNA + TURBO BROWSER (Ultrafast + 1080p limit)
       await ff.run(
         '-i', 'input.mp4', 
-        '-vf', 'format=yuv420p',
+        '-vf', 'scale=-2:1080,format=yuv420p',   // 🔑 Rem resolusi 1080p biar gak jebol
         '-c:v', 'libx264',
-        '-preset', 'superfast',   // 🔑 SUPERFAST biar sat-set!
-        '-crf', '20',
+        '-preset', 'ultrafast',                  // 🔑 SUPER NGEBUT
+        '-crf', '20',                            // 🔑 Kualitas tetep tajam
         '-bf', '0',
-        '-threads', String(ff._multiThread ? ffmpegThreadCount() : 1),  // 🔑 multi-core kalau crossOriginIsolated aktif, fallback 1 kalau enggak
+        '-threads', String(ff._multiThread ? ffmpegThreadCount() : 1), 
         '-c:a', 'aac',
         '-b:a', '128k',
         '-shortest',
@@ -206,12 +206,12 @@ document.getElementById('interpBtn').addEventListener('click', async () => {
     interpLog('inf', 'Writing input...'); ff.FS('writeFile', 'src.mp4', await ff._fetchFile(interpFileData));
     interpLog('inf', 'Step 1: Interpolate 60fps → ' + (60 * parseInt(scale)) + 'fps...');
     
-    // KODE SEMPURNA DI INTERP LAB
+    // KODE SEMPURNA DI INTERP LAB (Ultrafast + 1080p limit)
     await ff.run(
       '-i', 'src.mp4', 
-      '-vf', 'minterpolate=fps=' + (60 * parseInt(scale)) + ':mi_mode=mci:mc_mode=aobmc:vsbmc=1', 
+      '-vf', 'scale=-2:1080,minterpolate=fps=' + (60 * parseInt(scale)) + ':mi_mode=mci:mc_mode=aobmc:vsbmc=1', 
       '-c:v', 'libx264', 
-      '-preset', 'superfast',   // 🔑 SUPERFAST di sini juga!
+      '-preset', 'ultrafast',   
       '-crf', '20', 
       '-bf', '0',
       '-threads', String(ff._multiThread ? ffmpegThreadCount() : 1),
