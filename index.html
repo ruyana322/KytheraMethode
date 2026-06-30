@@ -3,151 +3,277 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>D4nzxml – Video Tool Pro</title>
+<title>D4nzxml — Video Tool Pro</title>
 <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
-<link rel="stylesheet" href="css/style.css">
+<style>
+:root{
+  --bg:#070708;
+  --glass:rgba(255,255,255,.045);
+  --glass-bd:rgba(255,255,255,.09);
+  --glass-hi:rgba(255,255,255,.08);
+  --text:#f5f5f7;
+  --muted:rgba(245,245,247,.55);
+  --muted2:rgba(245,245,247,.35);
+  --c:#00d2ff;
+  --purple:#a855f7;
+  --green:#00e887;
+  --orange:#ffb740;
+  --err:#ff5d5d;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{background:var(--bg);color:var(--text);}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;
+  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
+}
+/* ambient glow background */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(ellipse 600px 400px at 15% -5%, rgba(0,210,255,.14), transparent 60%),
+    radial-gradient(ellipse 500px 400px at 100% 20%, rgba(168,85,247,.10), transparent 60%),
+    radial-gradient(ellipse 500px 500px at 50% 100%, rgba(0,232,135,.07), transparent 60%);
+}
+.wrap{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:28px 18px 60px;}
+
+/* ── glass utility ── */
+.glass{
+  background:var(--glass);
+  border:1px solid var(--glass-bd);
+  backdrop-filter:blur(20px) saturate(140%);
+  -webkit-backdrop-filter:blur(20px) saturate(140%);
+  border-radius:20px;
+}
+
+/* ── header ── */
+.hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:30px;}
+.brand{display:flex;align-items:center;gap:9px;}
+.brand-ico{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(0,210,255,.18),rgba(168,85,247,.12));border:1px solid var(--glass-bd);}
+.brand-name{font-weight:700;font-size:15px;letter-spacing:-.01em;}
+.ver-pill{font-size:10.5px;font-weight:700;color:var(--muted);padding:5px 11px;border-radius:999px;cursor:pointer;}
+.ver-pill:active{background:rgba(255,255,255,.06);}
+
+/* ── hero ── */
+.hero{text-align:center;margin-bottom:22px;}
+.hero h1{font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1.15;}
+.hero h1 span{background:linear-gradient(90deg,var(--c),var(--purple));-webkit-background-clip:text;background-clip:text;color:transparent;}
+.hero p{font-size:12.5px;color:var(--muted);margin-top:7px;}
+
+/* ── preview ── */
+.prev-box{aspect-ratio:16/10;border-radius:18px;overflow:hidden;margin-bottom:16px;display:flex;align-items:center;justify-content:center;position:relative;}
+.prev-ph{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--muted2);text-align:center;padding:20px;}
+.prev-ph svg{opacity:.5;}
+.prev-ph span{font-size:11.5px;}
+#vidPrev{width:100%;height:100%;object-fit:contain;display:none;background:#000;}
+
+/* ── card ── */
+.card{padding:18px;margin-bottom:14px;}
+.card-h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:12px;}
+
+/* ── mode list ── */
+.mode-list{display:flex;flex-direction:column;gap:8px;}
+.mode-row{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:14px;border:1px solid var(--glass-bd);cursor:pointer;transition:background .15s,border-color .15s;}
+.mode-row:active{background:rgba(255,255,255,.04);}
+.mode-row.sel{border-color:rgba(0,210,255,.35);background:rgba(0,210,255,.06);}
+.mode-row.sel.purple{border-color:rgba(168,85,247,.35);background:rgba(168,85,247,.06);}
+.mode-row.sel.green{border-color:rgba(0,232,135,.35);background:rgba(0,232,135,.06);}
+.mode-row.sel.orange{border-color:rgba(255,183,64,.35);background:rgba(255,183,64,.06);}
+.mode-left{display:flex;align-items:center;gap:11px;}
+.mode-ico{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.mode-name{font-size:13px;font-weight:600;}
+.mode-desc{font-size:10.5px;color:var(--muted);margin-top:1px;}
+.radio-dot{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--glass-bd);flex-shrink:0;position:relative;}
+.mode-row.sel .radio-dot{border-color:var(--c);}
+.mode-row.sel.purple .radio-dot{border-color:var(--purple);}
+.mode-row.sel.green .radio-dot{border-color:var(--green);}
+.mode-row.sel.orange .radio-dot{border-color:var(--orange);}
+.mode-row.sel .radio-dot::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--c);}
+.mode-row.sel.purple .radio-dot::after{background:var(--purple);}
+.mode-row.sel.green .radio-dot::after{background:var(--green);}
+.mode-row.sel.orange .radio-dot::after{background:var(--orange);}
+
+/* ── sub panels (multiplier / encoder) ── */
+.sub-panel{display:none;margin-top:12px;padding-top:14px;border-top:1px solid var(--glass-bd);}
+.sub-panel.show{display:block;}
+.sub-lbl{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:9px;}
+.its-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.its-item{border:1px solid var(--glass-bd);border-radius:12px;padding:10px;text-align:center;cursor:pointer;}
+.its-item.sel{border-color:rgba(0,210,255,.4);background:rgba(0,210,255,.07);}
+.its-v{font-size:14px;font-weight:800;}
+.its-l{font-size:9.5px;color:var(--muted);margin-top:2px;line-height:1.3;}
+
+.enc-row{margin-bottom:11px;}
+.enc-row label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;}
+.enc-select{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--glass-bd);color:var(--text);border-radius:10px;padding:9px 10px;font-size:12.5px;outline:none;}
+.enc-stamp-row{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--glass-bd);font-size:11.5px;color:var(--muted);}
+.tog{position:relative;display:inline-block;width:38px;height:22px;cursor:pointer;}
+.tog input{opacity:0;width:0;height:0;}
+.tog-slider{position:absolute;inset:0;background:rgba(255,255,255,.12);border-radius:999px;transition:.2s;}
+.tog-slider::before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
+.tog input:checked + .tog-slider{background:var(--orange);}
+.tog input:checked + .tog-slider::before{transform:translateX(16px);}
+
+/* ── upload zone ── */
+.upload-z{margin-top:14px;border:1.5px dashed var(--glass-bd);border-radius:16px;padding:22px 16px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;}
+.upload-z.over,.upload-z:active{border-color:var(--c);background:rgba(0,210,255,.05);}
+.upload-z input{display:none;}
+.upload-t{font-size:12.5px;font-weight:600;margin-top:8px;}
+.upload-h{font-size:10px;color:var(--muted2);margin-top:3px;}
+.file-disp{margin-top:9px;font-size:11.5px;color:var(--muted2);text-align:center;}
+.file-disp.ok{color:var(--green);}
+
+/* ── status / progress ── */
+.status{font-size:12px;color:var(--muted);text-align:center;padding:4px 0;}
+.status.working{color:var(--c);}
+.status.success{color:var(--green);}
+.status.error{color:var(--err);}
+.prog-wrap{display:none;margin-top:10px;}
+.prog-wrap.show{display:block;}
+.prog-bg{height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;}
+.prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--c),var(--purple));border-radius:999px;transition:width .25s;}
+.prog-foot{display:flex;justify-content:space-between;margin-top:6px;font-size:10px;color:var(--muted2);}
+
+/* ── result ── */
+.result{display:none;padding:18px;margin-bottom:14px;}
+.result.show{display:block;}
+.res-top{display:flex;align-items:center;gap:11px;margin-bottom:14px;}
+.res-check{width:34px;height:34px;border-radius:50%;background:rgba(0,232,135,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.res-title{font-size:13.5px;font-weight:700;}
+.res-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.res-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.res-item{background:rgba(255,255,255,.03);border-radius:12px;padding:9px 11px;}
+.res-k{font-size:9.5px;color:var(--muted2);text-transform:uppercase;letter-spacing:.03em;}
+.res-v{font-size:12.5px;font-weight:700;margin-top:2px;}
+.res-v.g{color:var(--green);}
+
+/* ── button ── */
+.btn{width:100%;border:none;border-radius:16px;padding:15px;font-size:13.5px;font-weight:700;letter-spacing:.01em;color:#06080a;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,var(--c),#5fd8ff);transition:transform .12s,opacity .12s;}
+.btn:active{transform:scale(.98);}
+.btn:disabled{opacity:.35;pointer-events:none;}
+.btn.purple{background:linear-gradient(135deg,var(--purple),#c084fc);}
+.btn.green{background:linear-gradient(135deg,var(--green),#5cf0ad);}
+.btn.orange{background:linear-gradient(135deg,var(--orange),#ffcf80);}
+
+/* ── warn ── */
+.warn{display:flex;gap:9px;padding:13px 14px;border-radius:14px;background:rgba(255,93,93,.07);border:1px solid rgba(255,93,93,.18);margin-top:14px;font-size:11.5px;color:rgba(245,245,247,.75);line-height:1.5;}
+
+/* ── about / socials ── */
+.a-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--glass-bd);font-size:12px;}
+.a-row:last-child{border:none;}
+.a-k{color:var(--muted2);}
+.a-v{font-weight:600;}
+.soc-grid{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+.soc-item{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:14px;border:1px solid var(--glass-bd);text-decoration:none;color:var(--text);cursor:pointer;transition:background .15s;}
+.soc-item:active{background:rgba(255,255,255,.05);}
+.s-ico{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.s-plat{font-size:12px;font-weight:600;}
+.s-hdl{font-size:10.5px;color:var(--muted2);}
+
+footer{text-align:center;font-size:10.5px;color:var(--muted2);margin-top:24px;}
+
+/* ── section divider ── */
+.divider{display:flex;align-items:center;gap:10px;margin:26px 0 14px;}
+.divider span{font-size:10.5px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--glass-bd);}
+
+::-webkit-scrollbar{width:0;}
+</style>
 </head>
 <body>
 <div class="wrap">
 
-<!-- HEADER -->
-<div class="hdr">
-  <div class="brand">
-    <div class="brand-ico">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="rgba(0,210,255,.9)" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="brand">
+      <div class="brand-ico">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,210,255,.9)" stroke-width="2" stroke-linecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      </div>
+      <span class="brand-name">D4nzxml</span>
     </div>
-    <span class="brand-name">D4nzxml</span>
+    <span class="ver-pill glass" id="versionVal">v6.3</span>
   </div>
-  <div class="hdr-r">
-    <button class="lang-btn active" data-lang="id" onclick="setLang('id')">ID</button>
-    <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
-    <span class="pill new">NEW</span>
-    <span class="pill">v6.2</span>
+
+  <!-- HERO -->
+  <div class="hero">
+    <h1>Video Tool <span>Pro</span></h1>
+    <p>MP4 Optimizer · HD Quality — by D4nzxml</p>
   </div>
-</div>
-
-<!-- HERO -->
-<div class="hero">
-  <h1>Video Tool <span>Pro</span></h1>
-  <p class="hero-sub" data-i18n="subtitle">MP4 Optimizer · HD Quality — by D4nzxml</p>
-</div>
-
-<!-- STATS -->
-<div class="stats">
-  <div class="stat"><div class="stat-n c" id="sVid">2.5M+</div><div class="stat-l" data-i18n="statVid">Videos</div></div>
-  <div class="stat"><div class="stat-n g">99.8%</div><div class="stat-l" data-i18n="statRate">Success Rate</div></div>
-  <div class="stat"><div class="stat-n p">HD</div><div class="stat-l" data-i18n="statQ">Kualitas</div></div>
-</div>
-<div class="trust">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-  <span data-i18n="trust">Dipercaya Creator • HD Quality Certified</span>
-</div>
-
-<!-- SEC: PATCHER -->
-<div class="sec on" id="s-home">
 
   <!-- PREVIEW -->
-  <div class="prev-box" id="prevBox">
+  <div class="prev-box glass" id="prevBox">
     <div class="prev-ph" id="prevPh">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="4"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-      <span data-i18n="prevHint">Preview video</span>
-      <span style="display:block;font-size:10px;color:var(--muted2);margin-top:4px;">Preview akan muncul setelah video dipilih</span>
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="4"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+      <span>Preview muncul setelah video dipilih</span>
     </div>
     <video id="vidPrev" controls></video>
   </div>
 
-  <div class="card">
+  <!-- MODE -->
+  <div class="card glass">
     <div class="card-h">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,210,255,.8)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-      <span data-i18n="selectMode">Pilih Mode</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(0,210,255,.85)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span>Pilih Mode</span>
     </div>
-    <div style="font-size:11px;color:var(--muted2);margin-bottom:10px;line-height:1.5;">Pilih metode optimasi sesuai kebutuhan video Anda.</div>
 
     <div class="mode-list">
-      <div class="mode-row" id="rowPatch" onclick="selMode('patch')">
-        <div class="mode-row-left">
-          <div class="mode-ico active-c" id="icoP">⚡</div>
-          <div class="mode-txt">
-            <div class="mode-name" data-i18n="m1n">Smart Patch</div>
-            <div class="mode-desc" data-i18n="m1d">Otomatis deteksi &amp; proses</div>
-            <span class="mode-badge bc" data-i18n="m1b">AUTO</span>
-            <div style="font-size:9px;color:var(--muted2);margin-top:4px;letter-spacing:.02em;">🦈 Powered by <span style="color:var(--c);font-weight:600;">Shark Method</span> · by D4nzxml</div>
+      <div class="mode-row sel" id="rowPatch" onclick="selMode('patch')">
+        <div class="mode-left">
+          <div class="mode-ico">⚡</div>
+          <div>
+            <div class="mode-name">Smart Patch</div>
+            <div class="mode-desc">Otomatis deteksi & proses — recommended</div>
           </div>
         </div>
-        <label class="tog" onclick="event.stopPropagation()">
-          <input type="radio" name="modeRadio" value="patch" checked onchange="selMode('patch')">
-          <span class="tog-slider"></span>
-        </label>
+        <div class="radio-dot"></div>
       </div>
       <div class="mode-row" id="rowIts" onclick="selMode('its')">
-        <div class="mode-row-left">
-          <div class="mode-ico" id="icoI">📐</div>
-          <div class="mode-txt">
+        <div class="mode-left">
+          <div class="mode-ico">📐</div>
+          <div>
             <div class="mode-name">Speed Booster</div>
-            <div class="mode-desc" data-i18n="m2d">Optimasi frame timing video</div>
-            <span class="mode-badge bp" data-i18n="m2b">ADVANCED</span>
+            <div class="mode-desc">Optimasi frame timing video</div>
           </div>
         </div>
-        <label class="tog purple" onclick="event.stopPropagation()">
-          <input type="radio" name="modeRadio" value="its" onchange="selMode('its')">
-          <span class="tog-slider"></span>
-        </label>
+        <div class="radio-dot"></div>
       </div>
       <div class="mode-row" id="rowKy60" onclick="selMode('ky60')">
-        <div class="mode-row-left">
-          <div class="mode-ico" id="icoK">🚀</div>
-          <div class="mode-txt">
-            <div class="mode-name">Kythera 60fps Methode</div>
+        <div class="mode-left">
+          <div class="mode-ico">🚀</div>
+          <div>
+            <div class="mode-name">Kythera 60fps</div>
             <div class="mode-desc">Optimasi kualitas HD otomatis</div>
-            <span class="mode-badge bg">KYTHERA</span>
-            <div style="font-size:9px;margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">
-              <span style="background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);color:#ffd700;padding:1px 6px;border-radius:999px;font-weight:700;">👑 D4nzxml Exclusive</span>
-              <span style="background:rgba(0,232,135,.08);border:1px solid rgba(0,232,135,.2);color:var(--success);padding:1px 6px;border-radius:999px;font-weight:700;">⭐ Original Method</span>
-            </div>
           </div>
         </div>
-        <label class="tog green" onclick="event.stopPropagation()">
-          <input type="radio" name="modeRadio" value="ky60" onchange="selMode('ky60')">
-          <span class="tog-slider"></span>
-        </label>
+        <div class="radio-dot"></div>
       </div>
       <div class="mode-row" id="rowEncoder" onclick="selMode('encoder')">
-        <div class="mode-row-left">
-          <div class="mode-ico" id="icoE">🎛️</div>
-          <div class="mode-txt">
+        <div class="mode-left">
+          <div class="mode-ico">🎛️</div>
+          <div>
             <div class="mode-name">Advanced Encoder</div>
             <div class="mode-desc">Custom H.264 encoding settings</div>
-            <span class="mode-badge bo">PRO</span>
           </div>
         </div>
-        <label class="tog orange" onclick="event.stopPropagation()">
-          <input type="radio" name="modeRadio" value="encoder" onchange="selMode('encoder')">
-          <span class="tog-slider"></span>
-        </label>
+        <div class="radio-dot"></div>
       </div>
     </div>
 
-    <div class="its-panel" id="itsPanel">
-      <div class="sec-lbl" data-i18n="selectMultiplier">Pilih Multiplier</div>
+    <!-- multiplier panel (its) -->
+    <div class="sub-panel" id="itsPanel">
+      <div class="sub-lbl">Pilih Multiplier</div>
       <div class="its-grid">
-        <div class="its-item selected" data-scale="2"><div class="its-v">x2</div><div class="its-l">60→120fps<br>Recommended</div></div>
+        <div class="its-item sel" data-scale="2"><div class="its-v">x2</div><div class="its-l">60→120fps<br>Recommended</div></div>
         <div class="its-item" data-scale="4"><div class="its-v">x4</div><div class="its-l">60→240fps<br>Experimental</div></div>
       </div>
     </div>
 
-    <div class="its-panel" id="encoderPanel" style="border-color:rgba(255,183,64,.18);">
-      <div class="sec-lbl" style="color:var(--warn);">Advanced Encoder Settings</div>
-
+    <!-- encoder panel -->
+    <div class="sub-panel" id="encoderPanel">
+      <div class="sub-lbl">Advanced Encoder Settings</div>
       <div class="enc-row">
-        <label>Video Codec</label>
-        <select class="enc-select" id="encCodec">
-          <option value="libx264">H.264 (libx264)</option>
-        </select>
-        <div class="enc-hint">Core FFmpeg.wasm yang dipakai cuma bundle libx264 — H.265/VP9 belum bisa.</div>
-      </div>
-
-      <div class="enc-row">
-        <label>CRF (Constant Quality Factor)</label>
+        <label>CRF (Quality Factor)</label>
         <select class="enc-select" id="encCrf">
           <option value="16">16 — Best quality (huge file)</option>
           <option value="18" selected>18 — Best quality (large size)</option>
@@ -155,9 +281,7 @@
           <option value="23">23 — Default FFmpeg</option>
           <option value="28">28 — Smaller size, lower quality</option>
         </select>
-        <div class="enc-hint">Makin kecil angkanya = makin bagus kualitasnya, tapi size makin besar.</div>
       </div>
-
       <div class="enc-row">
         <label>Encoding Speed (Preset)</label>
         <select class="enc-select" id="encPreset">
@@ -166,14 +290,12 @@
           <option value="veryfast">veryfast</option>
           <option value="faster" selected>faster</option>
           <option value="fast">fast</option>
-          <option value="medium">medium (FFmpeg default)</option>
+          <option value="medium">medium (default)</option>
           <option value="slow">slow</option>
           <option value="slower">slower</option>
           <option value="veryslow">veryslow — best compression</option>
         </select>
-        <div class="enc-hint">Preset lebih lambat = kompresi/kualitas lebih baik, tapi proses lebih lama.</div>
       </div>
-
       <div class="enc-row">
         <label>Tune</label>
         <select class="enc-select" id="encTune">
@@ -186,7 +308,6 @@
           <option value="zerolatency">zerolatency</option>
         </select>
       </div>
-
       <div class="enc-row" style="margin-bottom:0;">
         <label>Profile</label>
         <select class="enc-select" id="encProfile">
@@ -195,166 +316,102 @@
           <option value="main">main</option>
           <option value="high">high</option>
         </select>
-        <div class="enc-hint">HP/device lama cuma support baseline/main. Kosongin aja kalau gak tau.</div>
       </div>
-
       <div class="enc-stamp-row">
-        <span>Terapkan TikTok HD stamp setelah encode</span>
-        <label class="tog orange">
+        <span>Terapkan TikTok HD stamp</span>
+        <label class="tog">
           <input type="checkbox" id="encApplyStamp" checked>
           <span class="tog-slider"></span>
         </label>
       </div>
     </div>
 
+    <!-- upload -->
     <div class="upload-z" id="dropZ">
       <input type="file" id="fileInput" accept="video/mp4,video/*">
-      <div class="upload-ico">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,210,255,.8)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      </div>
-      <div class="upload-t" data-i18n="selectVideo">Drag & Drop atau Klik</div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(0,210,255,.8)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div class="upload-t">Drag & Drop atau Klik</div>
       <div class="upload-h">MP4 · 100% Browser · No Upload</div>
     </div>
-    <div class="file-disp" id="fileDisp" data-i18n-ph="noFile">Belum ada file dipilih...</div>
+    <div class="file-disp" id="fileDisp">Belum ada file dipilih...</div>
   </div>
 
-  <div class="card">
-    <div class="sec-lbl" data-i18n="statusLabel">Status Proses</div>
-    <div class="status" id="statusBox" data-i18n="ready">Siap — pilih video untuk memulai.</div>
+  <!-- STATUS -->
+  <div class="card glass">
+    <div class="status" id="statusBox">Siap — pilih video untuk memulai.</div>
     <div class="prog-wrap" id="progWrap">
       <div class="prog-bg"><div class="prog-fill" id="progFill"></div></div>
       <div class="prog-foot">
-        <div class="prog-lbl" id="progLbl"></div>
-        <div class="prog-eta" id="progEta"></div>
+        <span id="progLbl"></span>
+        <span id="progEta"></span>
       </div>
     </div>
   </div>
 
   <!-- RESULT -->
-  <div class="card result" id="resultCard">
+  <div class="result glass" id="resultCard">
     <div class="res-top">
       <div class="res-check">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,232,135,.9)" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
       <div>
-        <div class="res-title" data-i18n="resTitle">Berhasil!</div>
-        <div class="res-sub" data-i18n="resSub">Video siap diupload ke TikTok</div>
+        <div class="res-title">Berhasil!</div>
+        <div class="res-sub">Video siap diupload ke TikTok</div>
       </div>
     </div>
     <div class="res-grid">
-      <div class="res-item"><div class="res-k" data-i18n="rFile">Nama File</div><div class="res-v" id="rFile">—</div></div>
-      <div class="res-item"><div class="res-k" data-i18n="rTime">Waktu Proses</div><div class="res-v g" id="rTime">—</div></div>
-      <div class="res-item"><div class="res-k" data-i18n="rBefore">Sebelum</div><div class="res-v" id="rBefore">—</div></div>
-      <div class="res-item"><div class="res-k" data-i18n="rAfter">Sesudah</div><div class="res-v g" id="rAfter">—</div></div>
+      <div class="res-item"><div class="res-k">Nama File</div><div class="res-v" id="rFile">—</div></div>
+      <div class="res-item"><div class="res-k">Waktu Proses</div><div class="res-v g" id="rTime">—</div></div>
+      <div class="res-item"><div class="res-k">Sebelum</div><div class="res-v" id="rBefore">—</div></div>
+      <div class="res-item"><div class="res-k">Sesudah</div><div class="res-v g" id="rAfter">—</div></div>
     </div>
   </div>
 
-  <button class="btn btn-c" id="patchBtn" disabled onclick="runProcess()">
+  <button class="btn" id="patchBtn" disabled onclick="runProcess()">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-    <span id="btnTxt" data-i18n="patchDownload">PATCH &amp; DOWNLOAD</span>
+    <span id="btnTxt">PATCH & DOWNLOAD</span>
   </button>
-
-  <!-- INTERP LAB (triple-tap version) -->
-  <div id="ilab">
-    <div class="card" style="border-color:rgba(168,85,247,.2);">
-      <div class="sec-lbl" style="color:var(--purple);">⬡ INTERPOLATE LAB</div>
-      <input type="file" id="interpFile" accept="video/*">
-      <div class="upload-z" onclick="document.getElementById('interpFile').click()" style="border-color:rgba(168,85,247,.28);padding:14px;">
-        <div class="upload-t" id="interpFname">Pilih Video 60fps</div>
-      </div>
-      <div class="its-grid" style="margin:10px 0;">
-        <div class="its-item selected" data-iscale="2"><div class="its-v">x2</div><div class="its-l">120fps</div></div>
-        <div class="its-item" data-iscale="4"><div class="its-v">x4</div><div class="its-l">240fps</div></div>
-      </div>
-      <div class="ilog" id="interpLog">— ready —</div>
-      <button class="btn btn-p" id="interpBtn" disabled style="margin-top:0;">INTERPOLATE + PATCH</button>
-    </div>
-  </div>
 
   <div class="warn">
-    <div class="warn-t" data-i18n="warnTitle">⚠️ Penting</div>
-    <p data-i18n="warnText">Video yang diupload ke TikTok tanpa proses patch ini akan otomatis dikompresi dan tidak bisa HD.</p>
+    <span>⚠️</span>
+    <p>Video yang diupload ke TikTok tanpa proses ini akan otomatis dikompresi dan tidak bisa HD. Upload hasil patch — bukan file aslinya.</p>
   </div>
-</div>
 
-<!-- SEC: PANDUAN -->
-<div class="sec" id="s-panduan">
-  <div class="card">
-    <div class="card-h">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(0,210,255,.8)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span data-i18n="guideTitle">Panduan Penggunaan</span>
-    </div>
-    <div class="guide-h" data-i18n="guideMode1">⚡ Smart Patch</div>
-    <div class="step"><div class="step-n">1</div><div><div class="step-t" data-i18n="g1s1t">Pilih Video</div><div class="step-d" data-i18n="g1s1d">Tap area upload atau drag & drop file MP4.</div></div></div>
-    <div class="step"><div class="step-n">2</div><div><div class="step-t" data-i18n="g1s2t">Tap PATCH & DOWNLOAD</div><div class="step-d" data-i18n="g1s2d">Tool otomatis scan & proses video. File hasil langsung terunduh.</div></div></div>
-    <div class="step"><div class="step-n">3</div><div><div class="step-t" data-i18n="g1s3t">Upload ke TikTok</div><div class="step-d" data-i18n="g1s3d">Buka <span class="step-code">tiktok.com/upload</span>. Upload file hasil — jangan upload file aslinya.</div></div></div>
-    <div class="guide-h" data-i18n="guideMode4">🚀 Speed Booster</div>
-    <div class="step"><div class="step-n">1</div><div><div class="step-t" data-i18n="g4s1t">Pilih Mode Speed Booster + Multiplier</div><div class="step-d" data-i18n="g4s1d">Pilih x2 (recommended) atau x4. Gunakan video 60fps.</div></div></div>
-    <div class="step" style="border:none;"><div class="step-n">2</div><div><div class="step-t" data-i18n="g4s2t">Tap PATCH & DOWNLOAD</div><div class="step-d" data-i18n="g4s2d">Jangan gunakan sound TikTok setelah upload.</div></div></div>
-  </div>
-  <div class="warn"><div class="warn-t" data-i18n="warnTitle">⚠️ Penting</div><p data-i18n="warnPatchText">Video tanpa patch akan dikompresi TikTok dan tidak bisa HD.</p></div>
-  <div class="tip"><div class="tip-t">✅ Tips</div><p data-i18n="tipText">Verifikasi hasil dengan MediaInfo → bagian General → pastikan metadata video sudah teroptimasi.</p></div>
-</div>
-
-<!-- SEC: INFO -->
-<div class="sec" id="s-info">
-  <div class="card">
-    <div class="card-h">About &amp; Info</div>
+  <!-- INFO -->
+  <div class="divider"><span>Info</span></div>
+  <div class="card glass">
     <div class="a-row"><span class="a-k">App</span><span class="a-v">D4nzxml Video Tool Pro</span></div>
     <div class="a-row"><span class="a-k">Developer</span><span class="a-v" style="color:var(--c);">D4nzxml</span></div>
-    <div class="a-row"><span class="a-k">Versi</span><span class="a-v" id="versionVal" style="cursor:pointer;">6.2</span></div>
-    <div class="a-row"><span class="a-k">Platform</span><span class="a-v">Web App (Vercel)</span></div>
-    <div class="a-row" style="border:none;"><span class="a-k">Server</span><span class="a-v">100% Client-side</span></div>
+    <div class="a-row"><span class="a-k">Versi</span><span class="a-v">6.3</span></div>
+    <div class="a-row"><span class="a-k">Server</span><span class="a-v">100% Client-side</span></div>
   </div>
-    <div class="soc-grid">
-      <a class="soc-item" href="https://tiktok.com/@dadanpeople" target="_blank">
-        <div class="s-ico s-tt"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--text)"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V9.05a8.27 8.27 0 0 0 4.84 1.55V7.16a4.85 4.85 0 0 1-1.07-.47z"/></svg></div>
-        <div><div class="s-plat">TikTok</div><div class="s-hdl">@dadanpeople</div></div>
-      </a>
-      <a class="soc-item" href="https://tiktok.com/@kytheraaa00" target="_blank">
-        <div class="s-ico s-tt"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--text)"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V9.05a8.27 8.27 0 0 0 4.84 1.55V7.16a4.85 4.85 0 0 1-1.07-.47z"/></svg></div>
-        <div><div class="s-plat">TikTok Admin 2</div><div class="s-hdl">@kytheraaa00</div></div>
-      </a>
-      <a class="soc-item" href="https://instagram.com/DadanRi" target="_blank">
-        <div class="s-ico s-ig"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(225,48,108,.9)" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1" fill="rgba(225,48,108,.9)" stroke="none"/></svg></div>
-        <div><div class="s-plat">Instagram</div><div class="s-hdl">@DadanRi</div></div>
-      </a>
-      <a class="soc-item" href="https://t.me/kytheraa_123" target="_blank">
-        <div class="s-ico s-tg"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(0,136,212,.9)"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.279c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.942z"/></svg></div>
-        <div><div class="s-plat">Telegram</div><div class="s-hdl">@kytheraa_123</div></div>
-      </a>
-      <div class="soc-item" id="donateBtn">
-        <div class="s-ico s-dn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,210,255,.9)" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-        <div><div class="s-plat">Donate DANA</div><div class="s-hdl" id="donateHdl">+6282129942772</div></div>
-      </div>
+
+  <div class="soc-grid">
+    <a class="soc-item glass" href="https://tiktok.com/@dadanpeople" target="_blank">
+      <div class="s-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="var(--text)"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V9.05a8.27 8.27 0 0 0 4.84 1.55V7.16a4.85 4.85 0 0 1-1.07-.47z"/></svg></div>
+      <div><div class="s-plat">TikTok</div><div class="s-hdl">@dadanpeople</div></div>
+    </a>
+    <a class="soc-item glass" href="https://instagram.com/DadanRi" target="_blank">
+      <div class="s-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(225,48,108,.9)" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r="1" fill="rgba(225,48,108,.9)" stroke="none"/></svg></div>
+      <div><div class="s-plat">Instagram</div><div class="s-hdl">@DadanRi</div></div>
+    </a>
+    <a class="soc-item glass" href="https://t.me/kytheraa_123" target="_blank">
+      <div class="s-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="rgba(0,136,212,.9)"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-1.97 9.279c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.942z"/></svg></div>
+      <div><div class="s-plat">Telegram</div><div class="s-hdl">@kytheraa_123</div></div>
+    </a>
+    <div class="soc-item glass" id="donateBtn">
+      <div class="s-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(0,210,255,.9)" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
+      <div><div class="s-plat">Donate DANA</div><div class="s-hdl" id="donateHdl">+6282129942772</div></div>
     </div>
   </div>
-</div>
 
-<footer><p>© D4nzxml – Video Tool Pro v6.2</p></footer>
+  <footer>© D4nzxml – Video Tool Pro v6.3</footer>
 </div>
-
-<!-- NAV -->
-<nav class="nav">
-  <button class="nav-btn on" data-t="s-home">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-    <span class="nav-lbl" data-i18n="navPatcher">Patcher</span>
-  </button>
-  <button class="nav-btn" data-t="s-panduan">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    <span class="nav-lbl" data-i18n="navGuide">Panduan</span>
-  </button>
-  <button class="nav-btn" data-t="s-info">
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    <span class="nav-lbl" data-i18n="navInfo">Info</span>
-  </button>
-</nav>
 
 <!-- JS modules, in dependency order -->
 <script src="js/atom-utils.js"></script>
 <script src="js/patcher.js"></script>
 <script src="js/ffmpeg-engine.js"></script>
-<script src="js/i18n.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
 </body>
