@@ -3,6 +3,12 @@
    (and therefore SharedArrayBuffer, required by ffmpeg.wasm) works on
    static hosts like GitHub Pages that can't set custom response headers. */
 let coepCredentialless = false;
+const FFMPEG_CACHE = "d4nzxml-ffmpeg-cache-v1";
+/** Anything matching this is large (~25-30MB) and version-pinned in the
+ *  URL (e.g. /core-mt@0.11.0/), so it's safe to cache forever and skip
+ *  re-downloading on every visit. */
+const isFfmpegAsset = (url) => /unpkg\.com\/@ffmpeg\/(core|core-mt)@/.test(url);
+
 if (typeof window === 'undefined') {
   self.addEventListener("install", () => self.skipWaiting());
   self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
@@ -22,6 +28,20 @@ if (typeof window === 'undefined') {
   self.addEventListener("fetch", function (event) {
     const r = event.request;
     if (r.cache === "only-if-cached" && r.mode !== "same-origin") return;
+
+    /* ── cache-first for ffmpeg-core (js/wasm/worker) ── */
+    if (isFfmpegAsset(r.url)) {
+      event.respondWith(
+        caches.open(FFMPEG_CACHE).then(async (cache) => {
+          const cached = await cache.match(r.url);
+          if (cached) return cached;
+          const fresh = await fetch(r, { mode: "cors" });
+          if (fresh && fresh.status === 200) cache.put(r.url, fresh.clone());
+          return fresh;
+        }).catch(() => fetch(r))
+      );
+      return;
+    }
 
     const request = (coepCredentialless && r.mode === "no-cors")
       ? new Request(r, { credentials: "omit" })
