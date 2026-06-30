@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>D4nzxml — Video Tool Pro</title>
+<script src="coi-serviceworker.js"></script>
 <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 <style>
 :root{
@@ -73,7 +74,12 @@ body::before{
 .card-h{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;margin-bottom:12px;}
 
 /* ── mode list ── */
-.mode-list{display:flex;flex-direction:column;gap:8px;}
+.mode-list{display:flex;flex-direction:column;gap:8px;overflow:hidden;max-height:0;transition:max-height .28s ease;}
+.mode-list.open{max-height:600px;}
+.mode-summary{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:14px;border:1px solid var(--glass-bd);cursor:pointer;margin-bottom:8px;}
+.mode-summary:active{background:rgba(255,255,255,.04);}
+.mode-summary .chev{color:var(--muted2);transition:transform .25s;flex-shrink:0;}
+.mode-summary.open .chev{transform:rotate(180deg);}
 .mode-row{display:flex;align-items:center;justify-content:space-between;padding:12px;border-radius:14px;border:1px solid var(--glass-bd);cursor:pointer;transition:background .15s,border-color .15s;}
 .mode-row:active{background:rgba(255,255,255,.04);}
 .mode-row.sel{border-color:rgba(0,210,255,.35);background:rgba(0,210,255,.06);}
@@ -217,7 +223,17 @@ footer{text-align:center;font-size:10.5px;color:var(--muted2);margin-top:24px;}
       <span>Pilih Mode</span>
     </div>
 
-    <div class="mode-list">
+    <div class="mode-summary" id="modeSummary" onclick="toggleModeList()">
+      <div class="mode-left">
+        <div class="mode-ico" id="curModeIco">⚡</div>
+        <div>
+          <div class="mode-name" id="curModeName">Smart Patch</div>
+          <div class="mode-desc" id="curModeDesc">Otomatis deteksi & proses — recommended</div>
+        </div>
+      </div>
+      <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="mode-list" id="modeList">
       <div class="mode-row sel" id="rowPatch" onclick="selMode('patch')">
         <div class="mode-left">
           <div class="mode-ico">⚡</div>
